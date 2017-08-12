@@ -1,15 +1,13 @@
 package io.swagger.codegen.languages;
 
-import io.swagger.codegen.CliOption;
-import io.swagger.codegen.CodegenConfig;
-import io.swagger.codegen.CodegenConstants;
-import io.swagger.codegen.CodegenModel;
-import io.swagger.codegen.CodegenParameter;
-import io.swagger.codegen.CodegenProperty;
-import io.swagger.codegen.CodegenType;
-import io.swagger.codegen.DefaultCodegen;
-import io.swagger.codegen.SupportingFile;
+import io.swagger.codegen.*;
 import io.swagger.models.properties.*;
+import io.swagger.models.Operation;
+import io.swagger.models.HttpMethod;
+import io.swagger.models.Path;
+import io.swagger.models.Swagger;
+import io.swagger.models.parameters.Parameter;
+
 
 import java.io.File;
 import java.util.ArrayList;
@@ -347,6 +345,41 @@ public class PythonClientCodegen extends DefaultCodegen implements CodegenConfig
             type = toModelName(swaggerType);
         }
         return type;
+    }
+
+    @Override
+    public void preprocessSwagger(Swagger swagger) {
+        //Get vendor extensions for x-kubernetes-...
+        Map<String, Path> paths = swagger.getPaths();
+        if(paths != null) {
+            for(String pathname : paths.keySet()) {
+                Path path = paths.get(pathname);
+                Map<HttpMethod, Operation> operationMap = path.getOperationMap();
+                if(operationMap != null) {
+                    for(HttpMethod method : operationMap.keySet()) {
+                        Operation operation = operationMap.get(method);
+                        String operationId = operation.getOperationId();
+                        if(operationId == null) {
+                            operationId = getOrGenerateOperationId(operation, pathname, method.toString());
+                        }
+
+                        operation.setOperationId(toOperationId(operationId));
+                        Object v1 = operation.getVendorExtensions().get("x-kubernetes-action");
+                        Object v2 = operation.getVendorExtensions().get("x-kubernetes-group-version-kind");
+
+                        if(v1 != null || v2 != null) {
+                            Map<String, Object> map = new HashMap<String, Object>();
+                            if(v1 != null)
+                            map.put("x-kubernetes-action", v1);
+                            if(v2 != null)
+                            map.put("x-kubernetes-group-version-kind", v2);
+
+                            vendorExtensions.put(operationId, map);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override
