@@ -364,17 +364,18 @@ public class PythonClientCodegen extends DefaultCodegen implements CodegenConfig
                         }
 
                         operation.setOperationId(toOperationId(operationId));
-                        Object v1 = operation.getVendorExtensions().get("x-kubernetes-action");
-                        Object v2 = operation.getVendorExtensions().get("x-kubernetes-group-version-kind");
+                        Object val = operation.getVendorExtensions().get("x-kubernetes-group-version-kind");
+                        Map<String, Object> map = new HashMap<String, Object>();
+                        Map<String, Object> gvc = new HashMap<String, Object>();
 
-                        if(v1 != null || v2 != null) {
-                            Map<String, Object> map = new HashMap<String, Object>();
-                            if(v1 != null)
-                            map.put("x-kubernetes-action", v1);
-                            if(v2 != null)
-                            map.put("x-kubernetes-group-version-kind", v2);
-
-                            vendorExtensions.put(operationId, map);
+                        if(val != null ) {
+                            if(((Map<String, Object>)operation.getVendorExtensions().get("x-kubernetes-group-version-kind")).get("group").equals("")){
+                                gvc.put("group", "core");
+                                gvc.put("version", ((Map<String, Object>)operation.getVendorExtensions().get("x-kubernetes-group-version-kind")).get("version"));
+                                gvc.put("kind", ((Map<String, Object>)operation.getVendorExtensions().get("x-kubernetes-group-version-kind")).get("kind"));
+                                map.put("x-kubernetes-group-version-kind", gvc);
+                                operation.setVendorExtensions(map);
+                            }
                         }
                     }
                 }
